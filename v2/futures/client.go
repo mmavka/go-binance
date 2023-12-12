@@ -427,10 +427,20 @@ func (c *Client) callAPI(ctx context.Context, r *request, opts ...RequestOption)
 	}
 
 	header = &res.Header
-
-	c.RateLimit.Weight.Count, _ = strconv.Atoi(header.Get("X-Mbx-Used-Weight-1m"))
-	c.RateLimit.Order1m.Count, _ = strconv.Atoi(header.Get("X-Mbx-Order-Count-1m"))
-	c.RateLimit.Order10s.Count, _ = strconv.Atoi(header.Get("X-Mbx-Order-Count-10s"))
+	weightCount, _ := strconv.Atoi(header.Get("X-Mbx-Used-Weight-1m"))
+	if weightCount != -1 {
+		c.RateLimit.Weight.Count = weightCount
+	}
+	for key := range res.Header {
+		if key == "X-Mbx-Order-Count-1m" {
+			c.RateLimit.Order1m.Count, _ = strconv.Atoi(header.Get("X-Mbx-Order-Count-1m"))
+			continue
+		}
+		if key == "X-Mbx-Order-Count-10s" {
+			c.RateLimit.Order10s.Count, _ = strconv.Atoi(header.Get("X-Mbx-Order-Count-10s"))
+			continue
+		}
+	}
 
 	return data, header, nil
 }
