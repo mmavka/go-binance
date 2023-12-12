@@ -232,6 +232,187 @@ type CreateOrderResponse struct {
 	RateLimitOrder1m        string           `json:"rateLimitOrder1m,omitempty"`  //
 }
 
+// CreateModifyOrderService order modify
+type CreateModifyOrderService struct {
+	c                 *Client
+	symbol            string
+	orderID           *int64
+	origClientOrderID *string
+	side              SideType //needs to be same as origin order
+	quantity          string   //Order quantity, cannot be sent with closePosition=true
+	price             string
+}
+
+// Symbol set symbol
+func (s *CreateModifyOrderService) Symbol(symbol string) *CreateModifyOrderService {
+	s.symbol = symbol
+	return s
+}
+
+// OrderID set orderID
+func (s *CreateModifyOrderService) OrderID(orderID int64) *CreateModifyOrderService {
+	s.orderID = &orderID
+	return s
+}
+
+// OrigClientOrderID set origClientOrderID
+func (s *CreateModifyOrderService) OrigClientOrderID(origClientOrderID string) *CreateModifyOrderService {
+	s.origClientOrderID = &origClientOrderID
+	return s
+}
+
+// Side set side
+func (s *CreateModifyOrderService) Side(side SideType) *CreateModifyOrderService {
+	s.side = side
+	return s
+}
+
+// Quantity set quantity
+func (s *CreateModifyOrderService) Quantity(quantity string) *CreateModifyOrderService {
+	s.quantity = quantity
+	return s
+}
+
+// Price set price
+func (s *CreateModifyOrderService) Price(price string) *CreateModifyOrderService {
+	s.price = price
+	return s
+}
+
+// Do send request
+func (s *CreateModifyOrderService) Do(ctx context.Context, opts ...RequestOption) (res *CreateModifyOrderResponse, err error) {
+	r := &request{
+		method:   http.MethodPut,
+		endpoint: "/fapi/v1/order",
+		secType:  secTypeSigned,
+	}
+	r.setFormParam("symbol", s.symbol)
+	if s.orderID != nil {
+		r.setFormParam("orderId", *s.orderID)
+	}
+	if s.origClientOrderID != nil {
+		r.setFormParam("origClientOrderId", *s.origClientOrderID)
+	}
+	r.setFormParam("side", s.side)
+	r.setFormParam("quantity", s.quantity)
+	r.setFormParam("price", s.price)
+	data, header, err := s.c.callAPI(ctx, r, opts...)
+	if err != nil {
+		return nil, err
+	}
+	res = new(CreateModifyOrderResponse)
+	err = json.Unmarshal(data, res)
+	if err != nil {
+		return nil, err
+	}
+	res.RateLimitOrder10s = header.Get("X-Mbx-Order-Count-10s")
+	res.RateLimitOrder1m = header.Get("X-Mbx-Order-Count-1m")
+	return res, nil
+}
+
+// CreateModifyOrderResponse define response of order modify
+type CreateModifyOrderResponse struct {
+	OrderID                 int64            `json:"orderId"`                     //
+	Symbol                  string           `json:"symbol"`                      //
+	Pair                    string           `json:"pair"`                        //
+	Status                  OrderStatusType  `json:"status"`                      //
+	ClientOrderID           string           `json:"clientOrderId"`               //
+	Price                   string           `json:"price"`                       //
+	AvgPrice                string           `json:"avgPrice"`                    //
+	OrigQuantity            string           `json:"origQty"`                     //
+	ExecutedQuantity        string           `json:"executedQty"`                 //
+	CumQuantity             string           `json:"cumQty"`                      //
+	CumBase                 string           `json:"cumBase"`                     //
+	TimeInForce             TimeInForceType  `json:"timeInForce"`                 //
+	Type                    OrderType        `json:"type"`                        //
+	ReduceOnly              bool             `json:"reduceOnly"`                  //
+	ClosePosition           bool             `json:"closePosition"`               //
+	Side                    SideType         `json:"side"`                        //
+	PositionSide            PositionSideType `json:"positionSide"`                //
+	StopPrice               string           `json:"stopPrice"`                   //
+	WorkingType             WorkingType      `json:"workingType"`                 //
+	PriceProtect            bool             `json:"priceProtect"`                //
+	OrigType                OrderType        `json:"origType"`                    //
+	PriceMatch              string           `json:"priceMatch"`                  // price match mode
+	SelfTradePreventionMode string           `json:"selfTradePreventionMode"`     // self trading preventation mode
+	GoodTillDate            int64            `json:"goodTillDate"`                // order pre-set auto cancel time for TIF GTD order
+	UpdateTime              int64            `json:"updateTime"`                  //
+	RateLimitOrder10s       string           `json:"rateLimitOrder10s,omitempty"` //
+	RateLimitOrder1m        string           `json:"rateLimitOrder1m,omitempty"`  //
+}
+
+// CreateBatchModifyOrderService batch order modify
+type CreateBatchModifyOrderService struct {
+	c           *Client
+	batchOrders []*CreateModifyOrderService // order list. Max 5 orders
+}
+
+// BatchOrders set batchOrders
+func (s *CreateBatchModifyOrderService) BatchOrders(batchOrders []*CreateModifyOrderService) *CreateBatchModifyOrderService {
+	s.batchOrders = batchOrders
+	return s
+}
+
+// Do send request
+func (s *CreateBatchModifyOrderService) Do(ctx context.Context, opts ...RequestOption) (res []*Order, err error) {
+	r := &request{
+		method:   http.MethodPut,
+		endpoint: "/fapi/v1/batchOrders",
+		secType:  secTypeSigned,
+	}
+	var orders []params
+	for _, v := range s.batchOrders {
+		order := params{
+			"symbol":   v.symbol,
+			"side":     v.side,
+			"quantity": v.quantity,
+			"price":    v.price,
+		}
+		if v.orderID != nil {
+			order["orderId"] = *v.orderID
+		}
+		if v.origClientOrderID != nil {
+			order["origClientOrderId"] = *v.origClientOrderID
+		}
+		orders = append(orders, order)
+	}
+	b, err := json.Marshal(orders)
+	if err != nil {
+		return nil, err
+	}
+	m := params{
+		"batchOrders": string(b),
+	}
+
+	r.setFormParams(m)
+
+	data, _, err := s.c.callAPI(ctx, r, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	rawMessages := make([]*json.RawMessage, 0)
+
+	err = json.Unmarshal(data, &rawMessages)
+
+	if err != nil {
+		return nil, err
+	}
+
+	res = make([]*Order, 0)
+
+	for _, rawMessage := range rawMessages {
+		order := new(Order)
+		err = json.Unmarshal(*rawMessage, order)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, order)
+	}
+
+	return res, nil
+}
+
 // ListOpenOrdersService list opened orders
 type ListOpenOrdersService struct {
 	c      *Client
@@ -826,7 +1007,7 @@ func (s *CreateBatchOrdersService) Do(ctx context.Context, opts ...RequestOption
 		secType:  secTypeSigned,
 	}
 
-	orders := []params{}
+	var orders []params
 	for _, order := range s.orders {
 		m := params{
 			"symbol":           order.symbol,
