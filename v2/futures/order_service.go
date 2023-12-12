@@ -232,8 +232,8 @@ type CreateOrderResponse struct {
 	RateLimitOrder1m        string           `json:"rateLimitOrder1m,omitempty"`  //
 }
 
-// CreateModifyOrderService order modify
-type CreateModifyOrderService struct {
+// ModifyOrderService order modify
+type ModifyOrderService struct {
 	c                 *Client
 	symbol            string
 	orderID           *int64
@@ -244,43 +244,43 @@ type CreateModifyOrderService struct {
 }
 
 // Symbol set symbol
-func (s *CreateModifyOrderService) Symbol(symbol string) *CreateModifyOrderService {
+func (s *ModifyOrderService) Symbol(symbol string) *ModifyOrderService {
 	s.symbol = symbol
 	return s
 }
 
 // OrderID set orderID
-func (s *CreateModifyOrderService) OrderID(orderID int64) *CreateModifyOrderService {
+func (s *ModifyOrderService) OrderID(orderID int64) *ModifyOrderService {
 	s.orderID = &orderID
 	return s
 }
 
 // OrigClientOrderID set origClientOrderID
-func (s *CreateModifyOrderService) OrigClientOrderID(origClientOrderID string) *CreateModifyOrderService {
+func (s *ModifyOrderService) OrigClientOrderID(origClientOrderID string) *ModifyOrderService {
 	s.origClientOrderID = &origClientOrderID
 	return s
 }
 
 // Side set side
-func (s *CreateModifyOrderService) Side(side SideType) *CreateModifyOrderService {
+func (s *ModifyOrderService) Side(side SideType) *ModifyOrderService {
 	s.side = side
 	return s
 }
 
 // Quantity set quantity
-func (s *CreateModifyOrderService) Quantity(quantity string) *CreateModifyOrderService {
+func (s *ModifyOrderService) Quantity(quantity string) *ModifyOrderService {
 	s.quantity = quantity
 	return s
 }
 
 // Price set price
-func (s *CreateModifyOrderService) Price(price string) *CreateModifyOrderService {
+func (s *ModifyOrderService) Price(price string) *ModifyOrderService {
 	s.price = price
 	return s
 }
 
 // Do send request
-func (s *CreateModifyOrderService) Do(ctx context.Context, opts ...RequestOption) (res *CreateModifyOrderResponse, err error) {
+func (s *ModifyOrderService) Do(ctx context.Context, opts ...RequestOption) (res *ModifyOrderResponse, err error) {
 	r := &request{
 		method:   http.MethodPut,
 		endpoint: "/fapi/v1/order",
@@ -300,7 +300,7 @@ func (s *CreateModifyOrderService) Do(ctx context.Context, opts ...RequestOption
 	if err != nil {
 		return nil, err
 	}
-	res = new(CreateModifyOrderResponse)
+	res = new(ModifyOrderResponse)
 	err = json.Unmarshal(data, res)
 	if err != nil {
 		return nil, err
@@ -310,8 +310,8 @@ func (s *CreateModifyOrderService) Do(ctx context.Context, opts ...RequestOption
 	return res, nil
 }
 
-// CreateModifyOrderResponse define response of order modify
-type CreateModifyOrderResponse struct {
+// ModifyOrderResponse define response of order modify
+type ModifyOrderResponse struct {
 	OrderID                 int64            `json:"orderId"`                     //
 	Symbol                  string           `json:"symbol"`                      //
 	Pair                    string           `json:"pair"`                        //
@@ -341,20 +341,20 @@ type CreateModifyOrderResponse struct {
 	RateLimitOrder1m        string           `json:"rateLimitOrder1m,omitempty"`  //
 }
 
-// CreateBatchModifyOrderService batch order modify
-type CreateBatchModifyOrderService struct {
+// ModifyBatchOrderService batch order modify
+type ModifyBatchOrderService struct {
 	c           *Client
-	batchOrders []*CreateModifyOrderService // order list. Max 5 orders
+	batchOrders []*ModifyOrderService // order list. Max 5 orders
 }
 
 // BatchOrders set batchOrders
-func (s *CreateBatchModifyOrderService) BatchOrders(batchOrders []*CreateModifyOrderService) *CreateBatchModifyOrderService {
+func (s *ModifyBatchOrderService) BatchOrders(batchOrders []*ModifyOrderService) *ModifyBatchOrderService {
 	s.batchOrders = batchOrders
 	return s
 }
 
 // Do send request
-func (s *CreateBatchModifyOrderService) Do(ctx context.Context, opts ...RequestOption) (res []*Order, err error) {
+func (s *ModifyBatchOrderService) Do(ctx context.Context, opts ...RequestOption) (res *ModifyBatchOrderResponse, err error) {
 	r := &request{
 		method:   http.MethodPut,
 		endpoint: "/fapi/v1/batchOrders",
@@ -386,31 +386,42 @@ func (s *CreateBatchModifyOrderService) Do(ctx context.Context, opts ...RequestO
 
 	r.setFormParams(m)
 
-	data, _, err := s.c.callAPI(ctx, r, opts...)
+	data, header, err := s.c.callAPI(ctx, r, opts...)
 	if err != nil {
-		return nil, err
+		return &ModifyBatchOrderResponse{}, err
 	}
 
 	rawMessages := make([]*json.RawMessage, 0)
 
 	err = json.Unmarshal(data, &rawMessages)
-
 	if err != nil {
-		return nil, err
+		return &ModifyBatchOrderResponse{}, err
 	}
 
-	res = make([]*Order, 0)
+	batchModifyOrderResponse := new(ModifyBatchOrderResponse)
 
-	for _, rawMessage := range rawMessages {
-		order := new(Order)
-		err = json.Unmarshal(*rawMessage, order)
+	for _, j := range rawMessages {
+		o := new(Order)
+		err = json.Unmarshal(*j, o)
 		if err != nil {
-			return nil, err
+			return &ModifyBatchOrderResponse{}, err
 		}
-		res = append(res, order)
+		if o.ClientOrderID != "" {
+			batchModifyOrderResponse.Orders = append(batchModifyOrderResponse.Orders, o)
+			continue
+		}
 	}
 
-	return res, nil
+	batchModifyOrderResponse.RateLimitOrder10s = header.Get("X-Mbx-Order-Count-10s")
+	batchModifyOrderResponse.RateLimitOrder1m = header.Get("X-Mbx-Order-Count-1m")
+
+	return batchModifyOrderResponse, nil
+}
+
+type ModifyBatchOrderResponse struct {
+	Orders            []*Order
+	RateLimitOrder10s string `json:"rateLimitOrder10s,omitempty"` //
+	RateLimitOrder1m  string `json:"rateLimitOrder1m,omitempty"`  //
 }
 
 // ListOpenOrdersService list opened orders
@@ -992,7 +1003,9 @@ type CreateBatchOrdersService struct {
 }
 
 type CreateBatchOrdersResponse struct {
-	Orders []*Order
+	Orders            []*Order
+	RateLimitOrder10s string `json:"rateLimitOrder10s,omitempty"` //
+	RateLimitOrder1m  string `json:"rateLimitOrder1m,omitempty"`  //
 }
 
 func (s *CreateBatchOrdersService) OrderList(orders []*CreateOrderService) *CreateBatchOrdersService {
@@ -1062,8 +1075,7 @@ func (s *CreateBatchOrdersService) Do(ctx context.Context, opts ...RequestOption
 
 	r.setFormParams(m)
 
-	data, _, err := s.c.callAPI(ctx, r, opts...)
-
+	data, header, err := s.c.callAPI(ctx, r, opts...)
 	if err != nil {
 		return &CreateBatchOrdersResponse{}, err
 	}
@@ -1071,7 +1083,6 @@ func (s *CreateBatchOrdersService) Do(ctx context.Context, opts ...RequestOption
 	rawMessages := make([]*json.RawMessage, 0)
 
 	err = json.Unmarshal(data, &rawMessages)
-
 	if err != nil {
 		return &CreateBatchOrdersResponse{}, err
 	}
@@ -1088,8 +1099,10 @@ func (s *CreateBatchOrdersService) Do(ctx context.Context, opts ...RequestOption
 			batchCreateOrdersResponse.Orders = append(batchCreateOrdersResponse.Orders, o)
 			continue
 		}
-
 	}
+
+	batchCreateOrdersResponse.RateLimitOrder10s = header.Get("X-Mbx-Order-Count-10s")
+	batchCreateOrdersResponse.RateLimitOrder1m = header.Get("X-Mbx-Order-Count-1m")
 
 	return batchCreateOrdersResponse, nil
 
