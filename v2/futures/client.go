@@ -222,6 +222,26 @@ func NewClient(apiKey, secretKey string) *Client {
 		UserAgent:  "Binance/golang",
 		HTTPClient: http.DefaultClient,
 		Logger:     log.New(os.Stderr, "Binance-golang ", log.LstdFlags),
+		RateLimit: RateLimits{
+			Order1m: RateLimitFull{
+				RateLimitType: RateLimitTypeOrders,
+				Interval:      RateLimitIntervalMinute,
+				IntervalNum:   1,
+				Limit:         1200,
+			},
+			Order10s: RateLimitFull{
+				RateLimitType: RateLimitTypeOrders,
+				Interval:      RateLimitIntervalSecond,
+				IntervalNum:   10,
+				Limit:         50,
+			},
+			Weight: RateLimitFull{
+				RateLimitType: RateLimitTypeRequestWeight,
+				Interval:      RateLimitIntervalMinute,
+				IntervalNum:   1,
+				Limit:         2400,
+			},
+		},
 	}
 }
 
@@ -409,6 +429,8 @@ func (c *Client) callAPI(ctx context.Context, r *request, opts ...RequestOption)
 	header = &res.Header
 
 	c.RateLimit.Weight.Count, _ = strconv.Atoi(header.Get("X-Mbx-Used-Weight-1m"))
+
+	c.debug("X-Mbx-Used-Weight-1m: %s", header)
 
 	return data, header, nil
 }
