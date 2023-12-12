@@ -233,7 +233,7 @@ func NewClient(apiKey, secretKey string) *Client {
 				RateLimitType: RateLimitTypeOrders,
 				Interval:      RateLimitIntervalSecond,
 				IntervalNum:   10,
-				Limit:         50,
+				Limit:         300,
 			},
 			Weight: RateLimitFull{
 				RateLimitType: RateLimitTypeRequestWeight,
@@ -275,7 +275,7 @@ func NewProxiedClient(apiKey, secretKey, proxyUrl string) *Client {
 				RateLimitType: RateLimitTypeOrders,
 				Interval:      RateLimitIntervalSecond,
 				IntervalNum:   10,
-				Limit:         50,
+				Limit:         300,
 			},
 			Weight: RateLimitFull{
 				RateLimitType: RateLimitTypeRequestWeight,
@@ -429,8 +429,8 @@ func (c *Client) callAPI(ctx context.Context, r *request, opts ...RequestOption)
 	header = &res.Header
 
 	c.RateLimit.Weight.Count, _ = strconv.Atoi(header.Get("X-Mbx-Used-Weight-1m"))
-
-	c.debug("X-Mbx-Used-Weight-1m: %s", header)
+	c.RateLimit.Order1m.Count, _ = strconv.Atoi(header.Get("X-Mbx-Order-Count-1m"))
+	c.RateLimit.Order10s.Count, _ = strconv.Atoi(header.Get("X-Mbx-Order-Count-10s"))
 
 	return data, header, nil
 }
