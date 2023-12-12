@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/bitly/go-simplejson"
@@ -70,6 +71,12 @@ type UserDataEventReasonType string
 
 // ForceOrderCloseType define reason type for force order
 type ForceOrderCloseType string
+
+// RateLimitType define the rate limitation types
+type RateLimitType string
+
+// RateLimitInterval define the rate limitation intervals
+type RateLimitInterval string
 
 // Endpoints
 const (
@@ -173,6 +180,12 @@ const (
 	ForceOrderCloseTypeLiquidation ForceOrderCloseType = "LIQUIDATION"
 	ForceOrderCloseTypeADL         ForceOrderCloseType = "ADL"
 
+	RateLimitTypeRequestWeight RateLimitType = "REQUEST_WEIGHT"
+	RateLimitTypeOrders        RateLimitType = "ORDERS"
+
+	RateLimitIntervalSecond RateLimitInterval = "SECOND"
+	RateLimitIntervalMinute RateLimitInterval = "MINUTE"
+
 	timestampKey  = "timestamp"
 	signatureKey  = "signature"
 	recvWindowKey = "recvWindow"
@@ -231,10 +244,44 @@ func NewProxiedClient(apiKey, secretKey, proxyUrl string) *Client {
 			Transport: tr,
 		},
 		Logger: log.New(os.Stderr, "Binance-golang ", log.LstdFlags),
+		RateLimit: RateLimits{
+			Order1m: RateLimitFull{
+				RateLimitType: RateLimitTypeOrders,
+				Interval:      RateLimitIntervalMinute,
+				IntervalNum:   1,
+				Limit:         1200,
+			},
+			Order10s: RateLimitFull{
+				RateLimitType: RateLimitTypeOrders,
+				Interval:      RateLimitIntervalSecond,
+				IntervalNum:   10,
+				Limit:         50,
+			},
+			Weight: RateLimitFull{
+				RateLimitType: RateLimitTypeRequestWeight,
+				Interval:      RateLimitIntervalMinute,
+				IntervalNum:   1,
+				Limit:         2400,
+			},
+		},
 	}
 }
 
 type doFunc func(req *http.Request) (*http.Response, error)
+
+type RateLimitFull struct {
+	RateLimitType RateLimitType     `json:"rateLimitType"`
+	Interval      RateLimitInterval `json:"interval"`
+	IntervalNum   int               `json:"intervalNum"`
+	Limit         int               `json:"limit"`
+	Count         int               `json:"count"`
+}
+
+type RateLimits struct {
+	Order1m  RateLimitFull
+	Order10s RateLimitFull
+	Weight   RateLimitFull
+}
 
 // Client define API client
 type Client struct {
@@ -247,6 +294,7 @@ type Client struct {
 	Logger     *log.Logger
 	TimeOffset int64
 	do         doFunc
+	RateLimit  RateLimits
 }
 
 func (c *Client) debug(format string, v ...interface{}) {
@@ -357,7 +405,12 @@ func (c *Client) callAPI(ctx context.Context, r *request, opts ...RequestOption)
 		}
 		return nil, &http.Header{}, apiErr
 	}
-	return data, &res.Header, nil
+
+	header = &res.Header
+
+	c.RateLimit.Weight.Count, _ = strconv.Atoi(header.Get("X-Mbx-Used-Weight-1m"))
+
+	return data, header, nil
 }
 
 // SetApiEndpoint set api Endpoint
