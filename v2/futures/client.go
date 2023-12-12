@@ -436,6 +436,16 @@ func (c *Client) NewCreateOrderService() *CreateOrderService {
 	return &CreateOrderService{c: c}
 }
 
+// NewCreateModifyOrderService init creating modify order service
+func (c *Client) NewCreateModifyOrderService() *CreateModifyOrderService {
+	return &CreateModifyOrderService{c: c}
+}
+
+// NewCreateBatchModifyOrderService init creating batch modify order service
+func (c *Client) NewCreateBatchModifyOrderService() *CreateBatchModifyOrderService {
+	return &CreateBatchModifyOrderService{c: c}
+}
+
 // NewCreateBatchOrdersService init creating batch order service
 func (c *Client) NewCreateBatchOrdersService() *CreateBatchOrdersService {
 	return &CreateBatchOrdersService{c: c}
