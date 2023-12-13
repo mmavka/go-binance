@@ -2,6 +2,7 @@ package binance
 
 import (
 	"context"
+	"github.com/goccy/go-json"
 	"net/http"
 
 	"github.com/mmavka/go-binance/v2/common"

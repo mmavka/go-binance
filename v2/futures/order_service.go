@@ -2,11 +2,12 @@ package futures
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/goccy/go-json"
 )
 
 // CreateOrderService create order

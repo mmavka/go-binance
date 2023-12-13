@@ -2,6 +2,7 @@ package binance
 
 import (
 	"fmt"
+	"github.com/goccy/go-json"
 	"io"
 	"net/http"
 	"net/url"

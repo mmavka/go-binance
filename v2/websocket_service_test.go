@@ -904,7 +904,7 @@ func (s *websocketServiceTestSuite) TestWsUserDataServeOrderUpdate() {
 			TransactionTime:   1629771130463,
 			TradeId:           1473,
 			IsInOrderBook:     false,
-			IsMaker:           true,
+			IsMaker:           false,
 			CreateTime:        1629771130463,
 			FilledQuoteVolume: "17.53700000",
 			LatestQuoteVolume: "17.53700000",

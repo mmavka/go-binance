@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/bitly/go-simplejson"
-	jsoniter "github.com/json-iterator/go"
+	"github.com/goccy/go-json"
 
 	"github.com/mmavka/go-binance/v2/common"
 	"github.com/mmavka/go-binance/v2/delivery"
@@ -110,9 +110,6 @@ const (
 
 // UseTestnet switch all the API endpoints from production to the testnet
 var UseTestnet = false
-
-// Redefining the standard package
-var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 // Global enums
 const (

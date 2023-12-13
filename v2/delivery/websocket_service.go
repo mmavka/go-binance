@@ -1,9 +1,9 @@
 package delivery
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/goccy/go-json"
 	"strings"
 	"time"
 )

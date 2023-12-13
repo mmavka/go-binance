@@ -305,7 +305,7 @@ func (s *orderServiceTestSuite) TestCancelOrder() {
 		"timeInForce": "GTC",
 		"reduceOnly": false,
 		"postOnly": false, 
-		"CreateTime": 1592465880683,
+		"createTime": 1592465880683,
 		"updateTime": 1566818724722,
 		"status": "ACCEPTED",
 		"avgPrice": "0",

@@ -11,6 +11,7 @@ package binance
 
 import (
 	"context"
+	"github.com/goccy/go-json"
 )
 
 // CreateUserUniversalTransferService submits a transfer request.

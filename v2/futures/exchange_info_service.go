@@ -2,7 +2,7 @@ package futures
 
 import (
 	"context"
-	"encoding/json"
+	"github.com/goccy/go-json"
 	"net/http"
 
 	"github.com/mmavka/go-binance/v2/common"

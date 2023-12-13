@@ -25,7 +25,7 @@ func (s *stakingServiceTestSuite) TestStakingProductPosition() {
 		"duration": 60,
 		"accrualDays": 4,
 		"rewardAsset": "AXS",
-		"APY": "0.2032",
+		"apy": "0.2032",
 		"rewardAmt": "5.17181528",
 		"extraRewardAsset": "BNB",
 		"extraRewardAPY": "0.0203",
